@@ -16,6 +16,31 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## SEO
+
+O projeto gera `/sitemap.xml` dinamicamente com as páginas públicas e os
+produtos ativos. O arquivo `/robots.txt` informa o sitemap e impede a indexação
+de rotas de conta, pedidos, pagamentos e API.
+
+Configure `NEXT_PUBLIC_SITE_URL` com a URL canônica do site em produção. Se ela
+não estiver definida, o projeto usa `APP_URL`, as variáveis de domínio da
+Vercel ou `http://localhost:3000`, nessa ordem.
+
+## Pedidos e pagamentos
+
+O carrinho consulta `order.quote` para exibir preços atuais, e a criação do
+pedido calcula novamente subtotal e total no servidor usando os preços do
+banco. Os endpoints PIX e cartão validam os valores persistidos antes de
+solicitar a cobrança ao Mercado Pago; alterações nos itens são bloqueadas
+enquanto houver um pagamento pendente ou confirmado.
+
+## Administração de produtos
+
+O catálogo administrativo fica em `/admin/produtos`, com busca, filtros,
+paginação, edição, ativação/desativação e exclusão confirmada. Produtos
+associados a itens de pedidos não podem ser excluídos; nesses casos, desative o
+produto para mantê-lo fora do cardápio sem perder o histórico.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
