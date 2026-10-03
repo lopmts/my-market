@@ -1,78 +1,200 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# My Market
 
-## Getting Started
+Aplicação de pedidos online para uma loja de alimentos, construída com Next.js.
+Clientes podem explorar o cardápio, gerenciar o carrinho e pagar com Pix ou
+cartão. A área administrativa permite acompanhar vendas e gerenciar produtos,
+categorias e pedidos.
 
-First, run the development server:
+## Telas
+
+### Página inicial e cardápio
+
+![Página inicial com banner e destaque de produtos](public/README/pagina-inicial-banner.jpeg)
+
+![Promoções e seção de produtos mais vendidos](public/README/promocoes-e-mais-vendidos.jpeg)
+
+### Conta do cliente
+
+![Histórico e acompanhamento de pedidos do cliente](public/README/historico-de-pedidos.jpeg)
+
+## Recursos principais
+
+- Catálogo com busca, categorias, avaliações, produtos em destaque e mais
+  vendidos.
+- Carrinho persistido no navegador, com suporte a um ou vários produtos.
+- Preços e totais recalculados no servidor a partir do banco antes da cobrança.
+- Acompanhamento de pedidos, cancelamento de pedidos pendentes, exclusão de
+  pedidos cancelados não pagos e opção de comprar novamente com os preços
+  atuais.
+- Autenticação por email e senha, login social Google, códigos de verificação
+  por email e gerenciamento de perfil.
+- Painel administrativo com indicadores, vendas, pedidos recentes e produtos
+  mais vendidos; gerenciamento de produtos e categorias.
+- SEO por página, metadados de produtos e categorias, sitemap dinâmico e
+  `robots.txt`.
+
+## Tecnologias
+
+- Next.js 16, React 19, TypeScript e Tailwind CSS 4.
+- PostgreSQL e Prisma ORM 7 com adaptador PostgreSQL.
+- Better Auth para autenticação.
+- tRPC e TanStack React Query para comunicação com a API.
+- Mercado Pago para pagamentos via Pix e cartão.
+- Nodemailer para emails de autenticação.
+
+## Rotas da aplicação
+
+| Rota | Descrição |
+| --- | --- |
+| `/` | Página inicial |
+| `/cardapio` | Catálogo de produtos |
+| `/cardapio/[id]` | Detalhe do produto |
+| `/categorias` | Lista de categorias |
+| `/categorias/[id]` | Produtos de uma categoria |
+| `/mais-vendidos` | Produtos mais vendidos |
+| `/carrinho` | Carrinho e início do checkout |
+| `/payment/pix` | Pagamento e acompanhamento por Pix |
+| `/payment/card` | Pagamento com cartão |
+| `/pedido/[id]` | Detalhes e status do pedido |
+| `/perfil` | Perfil do cliente |
+| `/perfil/pedidos` | Histórico e gerenciamento dos pedidos |
+| `/admin` | Dashboard administrativo |
+| `/admin/produtos` | Gerenciamento do catálogo |
+| `/admin/categorias` | Gerenciamento das categorias |
+
+As rotas da API incluem `/api/trpc`, `/api/payments/mercado-pago/pix`,
+`/api/payments/mercado-pago/card` e `/api/webhooks/mercado-pago`.
+
+## Requisitos
+
+- Node.js compatível com Next.js 16.
+- PostgreSQL acessível pela aplicação.
+- Credenciais do Mercado Pago para habilitar pagamentos.
+
+## Configuração local
+
+1. Instale as dependências:
+
+   ```bash
+   npm ci
+   ```
+
+2. Crie um arquivo `.env` na raiz do projeto e configure as variáveis da seção
+   [Variáveis de ambiente](#variáveis-de-ambiente). Nunca envie credenciais
+   reais para o Git.
+
+3. Gere o Prisma Client e aplique as migrações:
+
+   ```bash
+   npx prisma generate
+   npx prisma migrate deploy
+   ```
+
+4. Inicie o servidor de desenvolvimento:
+
+   ```bash
+   npm run dev
+   ```
+
+   Acesse [http://localhost:3000](http://localhost:3000).
+
+Para carregar os dados iniciais definidos em `prisma/seed.ts`, execute:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npx prisma db seed
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Variáveis de ambiente
 
-## SEO
+| Variável | Uso |
+| --- | --- |
+| `DATABASE_URL` | String de conexão PostgreSQL usada pelo Prisma. |
+| `BETTER_AUTH_SECRET` | Segredo usado pela autenticação. Gere um valor longo e aleatório. |
+| `BETTER_AUTH_URL` | URL base pública da aplicação usada pela autenticação. |
+| `APP_URL` | URL pública HTTPS da aplicação; usada para compor o webhook do Mercado Pago. Obrigatória para pagamentos em produção. |
+| `NEXT_PUBLIC_SITE_URL` | URL canônica do site para metadata, sitemap e SEO. |
+| `MERCADO_PAGO_ACCESS_TOKEN` | Token privado do Mercado Pago, usado no servidor. |
+| `NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY` | Chave pública do Mercado Pago, usada pelo SDK no navegador para tokenizar cartão. |
+| `MERCADO_PAGO_WEBHOOK_SECRET` | Segredo para validar a assinatura HMAC dos webhooks do Mercado Pago. |
+| `GOOGLE_CLIENT_ID` | ID OAuth do Google, se o login social estiver habilitado. |
+| `GOOGLE_CLIENT_SECRET` | Segredo OAuth do Google, se o login social estiver habilitado. |
+| `SMTP_HOST` | Host do servidor SMTP para emails de autenticação. |
+| `SMTP_PORT` | Porta SMTP; a aplicação usa TLS direto quando o valor é `465`. |
+| `SMTP_USER` | Usuário SMTP. |
+| `SMTP_PASSWORD` | Senha ou credencial SMTP. |
+| `SMTP_FROM` | Remetente dos emails enviados. |
+| `DELIVERY_FEE` | Taxa de entrega numérica; assume `0` quando não definida. |
 
-O projeto gera `/sitemap.xml` dinamicamente com as páginas públicas e os
-produtos ativos. O arquivo `/robots.txt` informa o sitemap e impede a indexação
-de rotas de conta, pedidos, pagamentos e API.
+`NEXT_PUBLIC_SITE_URL` tem precedência para SEO; na ausência dela, o projeto
+considera `APP_URL`, os domínios da Vercel e, por fim,
+`http://localhost:3000`. Já pagamentos do Mercado Pago precisam de `APP_URL`
+(ou da URL canônica configurada) em HTTPS e publicamente acessível. O endereço
+`localhost` não recebe notificações externas.
 
-Configure `NEXT_PUBLIC_SITE_URL` com a URL canônica do site em produção. Se ela
-não estiver definida, o projeto usa `APP_URL`, as variáveis de domínio da
-Vercel ou `http://localhost:3000`, nessa ordem.
-
-Os pagamentos do Mercado Pago exigem que `APP_URL` (ou
-`NEXT_PUBLIC_SITE_URL`) aponte para uma URL pública HTTPS para que o webhook
-seja válido e possa receber notificações. Em desenvolvimento local, use um
-túnel HTTPS (por exemplo, ngrok ou Cloudflare Tunnel) apontado para a porta
-3000 e defina `APP_URL` para a URL HTTPS gerada; reinicie o servidor após
-alterar o `.env`. URLs `localhost` não podem receber notificações do Mercado
-Pago e o endpoint de pagamento retorna uma mensagem de configuração em vez de
-enviar uma URL inválida.
+Para testar pagamentos durante o desenvolvimento, exponha a porta local por
+um túnel HTTPS (por exemplo, ngrok ou Cloudflare Tunnel), defina `APP_URL` com
+a URL pública fornecida e configure no painel do Mercado Pago o webhook
+`/api/webhooks/mercado-pago`, incluindo o segredo de assinatura correspondente.
 
 ## Pedidos e pagamentos
 
-O carrinho consulta `order.quote` para exibir preços atuais, e a criação do
-pedido calcula novamente subtotal e total no servidor usando os preços do
-banco. Os endpoints PIX e cartão validam os valores persistidos antes de
-solicitar a cobrança ao Mercado Pago; alterações nos itens são bloqueadas
-enquanto houver um pagamento pendente ou confirmado.
+O procedimento de checkout aceita um ou vários itens. O cliente pode receber
+uma cotação por `order.quote`, mas o servidor sempre consulta os produtos e
+calcula novamente subtotal, taxa de entrega e total antes de criar a cobrança.
+Os valores monetários são tratados com `Prisma.Decimal`.
 
-## Administração de produtos
+### Pix
 
-O catálogo administrativo fica em `/admin/produtos`, com busca, filtros,
-paginação, edição, ativação/desativação e exclusão confirmada. Produtos
-associados a itens de pedidos não podem ser excluídos; nesses casos, desative o
-produto para mantê-lo fora do cardápio sem perder o histórico.
+- O pagamento é criado no Mercado Pago com validade de 30 minutos.
+- Um Pix pendente e ainda válido reutiliza o mesmo QR Code em novas consultas.
+- Tentativas usam uma chave de idempotência por pedido e tentativa.
+- O QR Code e a validade ficam vinculados ao pedido no banco.
 
-## Painel administrativo
+### Cartão
 
-A rota `/admin` exibe indicadores dos últimos sete dias, faturamento de
-pagamentos confirmados, novos clientes, unidades vendidas, distribuição dos
-pedidos por status, pedidos recentes e produtos mais vendidos. Os dados vêm
-da rota protegida `admin.dashboard` e são atualizados automaticamente a cada
-minuto.
+- A opção de cartão está temporariamente desativada na interface e na API.
+- O checkout aceita Pix durante esse período; a rota de cartão exibe a
+  indisponibilidade e oferece direcionamento para Pix.
+- A integração original com o SDK Mercado Pago permanece no código, mas não
+  processa novas cobranças por cartão enquanto o endpoint estiver desativado.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Confirmação e segurança
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- O webhook `/api/webhooks/mercado-pago` valida a assinatura HMAC e consulta o
+  status real do pagamento diretamente no Mercado Pago.
+- Antes de confirmar um pagamento aprovado, o servidor confere valor, moeda e
+  correspondência com o pedido.
+- A confirmação atualiza o status do pedido; pagamentos recusados, cancelados
+  ou estornados mantêm status próprios no banco.
+- Não marque pedidos como pagos manualmente nem confie em valores enviados pelo
+  navegador.
 
-## Learn More
+## Banco de dados
 
-To learn more about Next.js, take a look at the following resources:
+O schema fica em `prisma/schema.prisma`; configurações do CLI Prisma 7 e seed
+ficam em `prisma7.config.ts`. As migrações versionadas estão em
+`prisma/migrations`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Comandos úteis:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npx prisma generate
+npx prisma migrate dev
+npx prisma migrate deploy
+npx prisma db seed
+```
 
-## Deploy on Vercel
+Use `migrate dev` durante o desenvolvimento para criar/aplicar migrações e
+`migrate deploy` para aplicar migrações já versionadas em ambientes de
+implantação.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Desenvolvimento e validação
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev
+npm run lint
+npm run build
+npm start
+```
+
+`npm start` inicia a versão de produção após um build bem-sucedido.

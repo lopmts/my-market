@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCheckout, type CheckoutPaymentMethod } from "@/hooks/useCheckout";
+import { useCheckout } from "@/hooks/useCheckout";
 
 const formatBRL = (value: number) =>
   new Intl.NumberFormat("pt-BR", {
@@ -26,8 +26,7 @@ const formatBRL = (value: number) =>
 
 export function CheckoutContent() {
   const { id } = useParams<{ id: string }>();
-  const { order, isLoading, error, paymentMethod, setPaymentMethod, confirm } =
-    useCheckout(id);
+  const { order, isLoading, error, confirm } = useCheckout(id);
 
   if (error) {
     return (
@@ -54,19 +53,12 @@ export function CheckoutContent() {
         </CardHeader>
         <CardContent>
           <RadioGroup
-            value={paymentMethod}
-            onValueChange={(value) =>
-              setPaymentMethod(value as CheckoutPaymentMethod)
-            }
+            value="PIX"
             className="gap-4"
           >
             <label
               htmlFor="method-pix"
-              className={`flex cursor-pointer items-start gap-4 rounded-lg border p-4 transition-colors ${
-                paymentMethod === "PIX"
-                  ? "border-orange-500 bg-orange-50 dark:bg-zinc-700/20"
-                  : "border-border"
-              }`}
+              className="flex cursor-pointer items-start gap-4 rounded-lg border border-orange-500 bg-orange-50 p-4 transition-colors dark:bg-zinc-700/20"
             >
               <RadioGroupItem value="PIX" id="method-pix" className="mt-1" />
               <div className="flex-1 space-y-1">
@@ -88,11 +80,7 @@ export function CheckoutContent() {
 
             <label
               htmlFor="method-card"
-              className={`flex cursor-pointer items-start gap-4 rounded-lg border p-4 transition-colors ${
-                paymentMethod === "CARD"
-                  ? "border-orange-500 bg-orange-50 dark:bg-zinc-700/20"
-                  : "border-border"
-              }`}
+              className="flex cursor-not-allowed items-start gap-4 rounded-lg border border-border p-4 opacity-55"
             >
               <RadioGroupItem
                 value="CARD"
@@ -104,9 +92,10 @@ export function CheckoutContent() {
                 <div className="flex items-center gap-2">
                   <CreditCard className="size-4 text-blue-600" />
                   <span className="font-medium">Cartão de crédito</span>
+                  <Badge variant="secondary">Indisponível</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Você informa os dados do cartão na próxima etapa.
+                  O pagamento com cartão está temporariamente indisponível.
                 </p>
               </div>
             </label>

@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import { CardPaymentRender } from "./card-payment-content";
 
 export const metadata: Metadata = {
-  title: "Pagamento com cartão | My Market",
-  description: "Acompanhe o pagamento do seu pedido com cartão.",
+  title: "Cartão temporariamente indisponível | My Market",
+  description:
+    "O pagamento com cartão está temporariamente indisponível. Pague seu pedido via Pix.",
   robots: { index: false, follow: false },
 };
 
