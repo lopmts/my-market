@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, UtensilsCrossed } from "lucide-react";
@@ -30,6 +31,8 @@ const categoryColors = [
 ];
 
 export default async function CategoriesPage() {
+  await connection();
+
   const categories = await prisma.category.findMany({
     where: { active: true },
     orderBy: [{ position: "asc" }, { name: "asc" }],
