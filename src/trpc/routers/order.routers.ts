@@ -364,25 +364,148 @@ export const orderRouter = createTRPCRouter({
       return order;
     }),
 
+  reorder: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const order = await prisma.order.findFirst({
+        where: { id: input.id, userId: ctx.user.id },
+        select: {
+          items: { select: { productId: true, quantity: true } },
+        },
+      });
+
+      if (!order) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Pedido não encontrado",
+        });
+      }
+
+      const products = await prisma.product.findMany({
+        where: {
+          id: { in: order.items.map((item) => item.productId) },
+          active: true,
+          category: { active: true },
+        },
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          price: true,
+          categoryId: true,
+        },
+      });
+      const productsById = new Map(products.map((product) => [product.id, product]));
+      const items = order.items.flatMap((item) => {
+        const product = productsById.get(item.productId);
+        if (!product) return [];
+
+        return [{
+          ...product,
+          price: product.price.toNumber(),
+          quantity: item.quantity,
+        }];
+      });
+
+      return {
+        items,
+        unavailableCount: order.items.length - items.length,
+      };
+    }),
+
   // Cliente cancela apenas pedidos ainda pendentes
   cancel: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const order = await getAccessibleOrder(input.id, ctx.user.id);
-
-      if (order.status !== "PENDING") {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Só é possível cancelar pedidos pendentes",
+      return prisma.$transaction(async (tx) => {
+        const order = await tx.order.findFirst({
+          where: { id: input.id, userId: ctx.user.id },
+          select: { status: true, payment: { select: { status: true } } },
         });
-      }
 
-      return prisma.order.update({
-        where: { id: order.id },
-        data: { status: "CANCELLED" },
-        include: orderInclude,
+        if (!order) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Pedido não encontrado",
+          });
+        }
+
+        if (order.status !== "PENDING" || order.payment?.status === "PAID") {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Este pedido não pode mais ser cancelado pelo perfil",
+          });
+        }
+
+        const updated = await tx.order.updateMany({
+          where: {
+            id: input.id,
+            userId: ctx.user.id,
+            status: "PENDING",
+          },
+          data: { status: "CANCELLED" },
+        });
+
+        if (updated.count !== 1) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "O status do pedido mudou. Atualize a página e tente novamente.",
+          });
+        }
+
+        await tx.payment.updateMany({
+          where: { orderId: input.id, status: "PENDING" },
+          data: { status: "CANCELLED" },
+        });
+
+        return tx.order.findUniqueOrThrow({
+          where: { id: input.id },
+          include: orderInclude,
+        });
       });
     }),
+
+  deleteCancelled: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) =>
+      prisma.$transaction(async (tx) => {
+        const order = await tx.order.findFirst({
+          where: { id: input.id, userId: ctx.user.id },
+          select: { status: true, payment: { select: { status: true } } },
+        });
+
+        if (!order) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Pedido não encontrado",
+          });
+        }
+
+        if (order.status !== "CANCELLED" || order.payment?.status === "PAID") {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Somente pedidos cancelados e não pagos podem ser excluídos",
+          });
+        }
+
+        const deleted = await tx.order.deleteMany({
+          where: {
+            id: input.id,
+            userId: ctx.user.id,
+            status: "CANCELLED",
+          },
+        });
+
+        if (deleted.count !== 1) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "O pedido mudou. Atualize a página e tente novamente.",
+          });
+        }
+
+        return { id: input.id };
+      }),
+    ),
 
   // Somente admin: avança o status do pedido
   updateStatus: adminProcedure

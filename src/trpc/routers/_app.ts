@@ -1,5 +1,6 @@
 import { createTRPCRouter } from "../init";
 import { aoddressRouter } from "./aoddress.routers";
+import { adminRouter } from "./admin.routers";
 import { categoryRouter } from "./categorys.routers";
 import { orderItemRouter } from "./order-item.routers";
 import { orderRouter } from "./order.routers";
@@ -15,6 +16,7 @@ export const appRouter = createTRPCRouter({
   orderItem: orderItemRouter,
   review: reviewRouter,
   address: aoddressRouter,
+  admin: adminRouter,
 });
 
 // export type definition of API

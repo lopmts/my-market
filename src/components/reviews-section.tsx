@@ -2,6 +2,7 @@ import { useTRPC } from "@/trpc/client";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { cn } from "cn";
 import { Loader2, Star } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 
@@ -27,8 +28,25 @@ export function ReviewsSection({ productId }: { productId: string }) {
   return (
     <div className="space-y-6">
       {isLoading && (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 size={20} className="animate-spin text-muted-foreground" />
+        <div
+          role="status"
+          aria-label="Carregando avaliações"
+          className="space-y-4"
+        >
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="space-y-3 rounded-xl border p-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="size-9 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-3.5 w-28" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-4/5" />
+            </div>
+          ))}
+          <span className="sr-only">Carregando avaliações...</span>
         </div>
       )}
 

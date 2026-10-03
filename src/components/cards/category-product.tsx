@@ -2,9 +2,11 @@
 
 import { useTRPC } from "@/trpc/client";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Loader } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { CategoryGridSkeleton } from "@/components/skeletons/catalog-skeletons";
+import { ScrollReveal } from "@/components/scroll-reveal";
 
 // Paleta de cores por categoria (fundo claro + texto/seta escuros o suficiente
 // para manter contraste em cima da cor pastel). Se precisar de mais tons,
@@ -71,9 +73,13 @@ const CategoryProduct = () => {
 
   if (isLoading) {
     return (
-      <div className="w-full p-2 mx-auto h-full mt-3 max-w-7xl">
-        <div className="flex items-center justify-center w-full h-full">
-          <Loader size={26} className="animate-spin" />
+      <div className="mt-4 w-full">
+        <div className="pb-2.5">
+          <span className="text-base text-amber-500">ESCOLHA SUA CATEGORIA</span>
+          <h2 className="font-semibold text-2xl">O que você vai pedir hoje?</h2>
+        </div>
+        <div className="mt-3.5">
+          <CategoryGridSkeleton count={5} />
         </div>
       </div>
     );
@@ -115,52 +121,47 @@ const CategoryProduct = () => {
 
       <div className="mt-3.5">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {data?.map((c) => {
+          {data?.map((c, index) => {
             const color = getCategoryColor(c.slug);
 
             return (
-              <Link
-                href={`/categorias/${encodeURIComponent(c.id)}`}
-                aria-label={c.name}
-                key={c.id}
-                className={`group relative block h-44 md:h-52 overflow-hidden rounded-2xl ${color.bg} transition-transform duration-200 hover:-translate-y-1 hover:shadow-md`}
-              >
-                {c.image ? (
-                  <Image
-                    src={c.image}
-                    alt={c.name}
-                    className="object-cover transition-transform duration-200 group-hover:scale-105"
-                    fill
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
-                  />
-                ) : (
-                  <div
-                    className={`flex h-full w-full items-center justify-center text-center text-lg font-semibold ${color.text}`}
-                  >
-                    {c.name}
-                  </div>
-                )}
-
-                {/* O painel fica sobreposto à foto (não abaixo dela): assim o
-                    backdrop-blur borra a própria imagem, criando o efeito de
-                    vidro fosco com transparência leve. Antes ele ficava num
-                    bloco separado embaixo, sobre o fundo da página — por isso
-                    o blur não tinha nada colorido para borrar e ficava
-                    esbranquiçado. */}
-                <div
-                  className={`absolute inset-x-1 bottom-1 flex flex-col gap-0.5 rounded-xl border border-white/40 px-3 py-2.5 shadow-sm backdrop-blur-md ${color.panel}`}
+              <ScrollReveal key={c.id} delay={index * 45}>
+                <Link
+                  href={`/categorias/${encodeURIComponent(c.id)}`}
+                  aria-label={c.name}
+                  className={`group relative block h-44 md:h-52 overflow-hidden rounded-2xl ${color.bg} transition-transform duration-200 hover:-translate-y-1 hover:shadow-md`}
                 >
-                  <h3
-                    className={`truncate text-sm font-semibold ${color.text}`}
+                  {c.image ? (
+                    <Image
+                      src={c.image}
+                      alt={c.name}
+                      className="object-cover transition-transform duration-200 group-hover:scale-105"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+                    />
+                  ) : (
+                    <div
+                      className={`flex h-full w-full items-center justify-center text-center text-lg font-semibold ${color.text}`}
+                    >
+                      {c.name}
+                    </div>
+                  )}
+
+                  <div
+                    className={`absolute inset-x-1 bottom-1 flex flex-col gap-0.5 rounded-xl border border-white/40 px-3 py-2.5 shadow-sm backdrop-blur-md ${color.panel}`}
                   >
-                    {c.name}
-                  </h3>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className={color.text}>{c.productCount} opções</span>
-                    <ArrowRight size={14} className={color.arrow} />
+                    <h3
+                      className={`truncate text-sm font-semibold ${color.text}`}
+                    >
+                      {c.name}
+                    </h3>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={color.text}>{c.productCount} opções</span>
+                      <ArrowRight size={14} className={color.arrow} />
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </ScrollReveal>
             );
           })}
         </div>

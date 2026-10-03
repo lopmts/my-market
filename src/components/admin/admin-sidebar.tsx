@@ -40,7 +40,7 @@ const NAV_ITEMS: {
 }[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Produtos", href: "/admin/produtos", icon: Package },
-  { label: "Categorias", icon: Tags },
+  { label: "Categorias", href: "/admin/categorias", icon: Tags },
   { label: "Pedidos", icon: ShoppingBag },
   { label: "Clientes", icon: UsersRound },
   { label: "Avaliações", icon: Star },

@@ -15,12 +15,13 @@ import {
   Check,
   FlameIcon,
   ImageOff,
-  Loader,
   ShoppingCart,
   Star,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { ProductGridSkeleton } from "@/components/skeletons/catalog-skeletons";
+import { ScrollReveal } from "@/components/scroll-reveal";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader } from "../ui/card";
 
@@ -166,10 +167,20 @@ const BestSellers = () => {
 
   if (isLoading) {
     return (
-      <div className="w-full p-2 mx-auto h-full mt-3 max-w-7xl">
-        <div className="flex items-center justify-center w-full h-full">
-          <Loader size={26} className="animate-spin" />
+      <div className="mt-8 w-full">
+        <div className="flex items-center gap-2 pb-3.5">
+          <FlameIcon size={40} className="text-amber-500" />
+          <div>
+            <h2 className="text-2xl font-semibold">Mais Vendidos</h2>
+            <p className="text-base text-zinc-400 dark:text-zinc-300">
+              Os pratos que todo mundo ama!
+            </p>
+          </div>
         </div>
+        <ProductGridSkeleton
+          count={5}
+          className="grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
+        />
       </div>
     );
   }
@@ -209,8 +220,10 @@ const BestSellers = () => {
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {data?.map((c) => (
-          <ProductCard key={c.id} product={c} />
+        {data?.map((c, index) => (
+          <ScrollReveal key={c.id} delay={index * 45}>
+            <ProductCard product={c} />
+          </ScrollReveal>
         ))}
       </div>
     </div>

@@ -22,6 +22,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { ProductGridSkeleton } from "@/components/skeletons/catalog-skeletons";
+import { ScrollReveal } from "@/components/scroll-reveal";
 import { useCartNotificationStore } from "@/lib/cart-notification-store";
 import { useCartItem, useCartStore } from "@/store/cart-store";
 
@@ -334,14 +336,10 @@ export const BestSellersContent = () => {
             </div>
 
             {isLoading ? (
-              <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-72 animate-pulse rounded-xl bg-muted"
-                  />
-                ))}
-              </div>
+              <ProductGridSkeleton
+                count={8}
+                className="grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              />
             ) : products.length === 0 ? (
               <p className="py-12 text-center text-muted-foreground">
                 Ainda não há produtos mais vendidos.
@@ -349,7 +347,9 @@ export const BestSellersContent = () => {
             ) : (
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((p, i) => (
-                  <BestSellerCard key={p.id} product={p} rank={i + 1} />
+                  <ScrollReveal key={p.id} delay={i * 45}>
+                    <BestSellerCard product={p} rank={i + 1} />
+                  </ScrollReveal>
                 ))}
               </div>
             )}

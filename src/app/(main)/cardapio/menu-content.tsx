@@ -20,6 +20,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { ProductListSkeleton } from "@/components/skeletons/catalog-skeletons";
+import { ScrollReveal } from "@/components/scroll-reveal";
 import { useCartNotificationStore } from "@/lib/cart-notification-store";
 import {
   useCartHasHydrated,
@@ -366,7 +368,10 @@ export const MenuContent = () => {
   const trpc = useTRPC();
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
 
-  const { data: categories = [] } = useQuery(
+  const {
+    data: categories = [],
+    isLoading: isLoadingCategories,
+  } = useQuery(
     trpc.category.list.queryOptions({ withCount: false, take: 20 }),
   );
 
@@ -423,7 +428,17 @@ export const MenuContent = () => {
       <div className="mx-auto w-full max-w-7xl p-4">
         {/* Abas de categorias */}
         <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none">
-          {categories.map((c) => {
+          {isLoadingCategories
+            ? Array.from({ length: 5 }, (_, index) => (
+                <div
+                  key={index}
+                  className="flex h-12 min-w-32 shrink-0 items-center gap-2 rounded-xl border px-5"
+                >
+                  <div className="size-5 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+                </div>
+              ))
+            : categories.map((c) => {
             const Icon = categoryIcons[c.slug] ?? UtensilsCrossed;
             const active = c.slug === currentSlug;
             return (
@@ -459,22 +474,17 @@ export const MenuContent = () => {
             </div>
 
             {isLoading ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-36 animate-pulse rounded-xl bg-muted"
-                  />
-                ))}
-              </div>
+              <ProductListSkeleton count={6} />
             ) : items.length === 0 ? (
               <p className="py-12 text-center text-muted-foreground">
                 Nenhum produto disponível nesta categoria.
               </p>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
-                {mainItems.map((p) => (
-                  <ProductCard key={p.id} product={p} />
+                {mainItems.map((p, index) => (
+                  <ScrollReveal key={p.id} delay={index * 45}>
+                    <ProductCard product={p} />
+                  </ScrollReveal>
                 ))}
               </div>
             )}
@@ -488,8 +498,14 @@ export const MenuContent = () => {
                   <div className="h-px flex-1 bg-border" />
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-                  {otherItems.map((p) => (
-                    <CompactCard key={p.id} product={p} />
+                  {otherItems.map((p, index) => (
+                    <ScrollReveal
+                      key={p.id}
+                      className="shrink-0"
+                      delay={index * 45}
+                    >
+                      <CompactCard product={p} />
+                    </ScrollReveal>
                   ))}
                 </div>
               </section>

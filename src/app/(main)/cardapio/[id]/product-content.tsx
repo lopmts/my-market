@@ -8,7 +8,6 @@ import {
   ChevronRightIcon,
   CreditCard,
   Heart,
-  Loader,
   Minus,
   Plus,
   ShieldCheck,
@@ -24,6 +23,7 @@ import { useState } from "react";
 import { ReviewsSection } from "@/components/reviews-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProductDetailSkeleton } from "@/components/skeletons/catalog-skeletons";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCartNotificationStore } from "@/lib/cart-notification-store";
 import { cn } from "@/lib/utils";
@@ -70,15 +70,7 @@ export const ProductContent = () => {
     ),
   );
 
-  if (isLoading || isLoadingBreakdown) {
-    return (
-      <div className="w-full p-2 mx-auto h-full mt-3 max-w-7xl min-h-screen">
-        <div className="flex items-center justify-center w-full h-full">
-          <Loader size={26} className="animate-spin" />
-        </div>
-      </div>
-    );
-  }
+  if (isLoading || isLoadingBreakdown) return <ProductDetailSkeleton />;
 
   if (isError || !product) {
     return (

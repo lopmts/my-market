@@ -2,7 +2,8 @@
 
 import { ChevronLeft, ChevronRight, Play, UtensilsCrossed } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 /**
  * HeroBanner
@@ -67,14 +68,47 @@ export default function HeroBanner({
   onComoFunciona,
 }: HeroBannerProps) {
   const [active, setActive] = useState(0);
-  const slide = slides[active];
+  const [isHovered, setIsHovered] = useState(false);
+  const [hasFocus, setHasFocus] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const availableSlides = slides.length ? slides : defaultSlides;
+  const slide = availableSlides[active % availableSlides.length];
 
   const goTo = (index: number) => {
-    setActive((index + slides.length) % slides.length);
+    setActive((index + availableSlides.length) % availableSlides.length);
   };
 
+  useEffect(() => {
+    if (availableSlides.length < 2 || reduceMotion || isHovered || hasFocus) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        setActive((current) => (current + 1) % availableSlides.length);
+      }
+    }, 6500);
+
+    return () => window.clearInterval(interval);
+  }, [active, availableSlides.length, hasFocus, isHovered, reduceMotion]);
+
   return (
-    <section className="relative isolate mx-auto w-full overflow-hidden  border border-white/10 bg-[#120b0a]">
+    <section
+      aria-label="Destaques da loja"
+      aria-roledescription="carrossel"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocusCapture={() => setHasFocus(true)}
+      onBlurCapture={(event) => {
+        if (
+          !(event.relatedTarget instanceof Node) ||
+          !event.currentTarget.contains(event.relatedTarget)
+        ) {
+          setHasFocus(false);
+        }
+      }}
+      className="relative isolate mx-auto w-full overflow-hidden border border-white/10 bg-[#120b0a]"
+    >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(255,140,0,0.15),transparent_20%),radial-gradient(circle_at_80%_30%,rgba(255,153,0,0.12),transparent_30%),linear-gradient(90deg,#060606_0%,#090909_25%,rgba(13,10,10,0.72)_52%,rgba(12,8,9,0.2)_100%)]" />
 
       <div className="max-w-7xl mx-auto">
@@ -84,7 +118,10 @@ export default function HeroBanner({
           </p>
         </div>
 
-        <div className="absolute inset-0 z-10">
+        <div
+          key={slide.backgroundSrc}
+          className="hero-enter absolute inset-0 z-10"
+        >
           {slide.backgroundSrc ? (
             <Image
               src={slide.backgroundSrc}
@@ -103,10 +140,19 @@ export default function HeroBanner({
         <div className="absolute inset-0 z-10 bg-linear-to-r from-[#030303]/90 via-[#0a0909]/70 to-[#0d0a0a]/10" />
 
         <div className="relative z-20 flex min-h-105 flex-col justify-between px-5 py-6 sm:min-h-125 sm:px-8 sm:py-8 lg:min-h-140 lg:px-14 lg:py-10">
+          <div
+            key={active}
+            aria-live="off"
+            className="flex flex-1 flex-col justify-between"
+          >
           <div className="flex items-start justify-between gap-4">
-            <p className="flex flex-wrap items-center gap-x-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#f6b35f] sm:text-xs lg:text-sm">
+            <p className="hero-enter flex flex-wrap items-center gap-x-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#f6b35f] sm:text-xs lg:text-sm">
               {slide.categories.map((cat, i) => (
-                <span key={cat} className="flex items-center gap-2">
+                <span
+                  key={cat}
+                  className="hero-enter flex items-center gap-2"
+                  style={{ animationDelay: `${i * 45}ms` }}
+                >
                   {i > 0 && <span className="text-[#f6b35f]/70">•</span>}
                   {cat}
                 </span>
@@ -114,7 +160,10 @@ export default function HeroBanner({
             </p>
 
             {slide.comboPrice && (
-              <div className="hidden shrink-0 rounded-[18px] border border-[#f2d284]/15 bg-[#0b0b0b]/85 px-5 py-3 text-right shadow-[0_20px_30px_rgba(0,0,0,0.35)] backdrop-blur-[2px] sm:block">
+              <div
+                className="hero-enter hidden shrink-0 rounded-[18px] border border-[#f2d284]/15 bg-[#0b0b0b]/85 px-5 py-3 text-right shadow-[0_20px_30px_rgba(0,0,0,0.35)] backdrop-blur-[2px] sm:block"
+                style={{ animationDelay: "100ms" }}
+              >
                 <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f7b14b]">
                   {slide.comboLabel}
                 </p>
@@ -132,21 +181,33 @@ export default function HeroBanner({
 
           <div className="max-w-lg pt-4">
             <h1 className="text-4xl font-black leading-[0.9] tracking-[-0.06em] text-white sm:text-5xl lg:text-[5rem]">
-              <span className="block">{slide.headline[0]}</span>
-              <span className="mt-2 block text-[#ffca72] sm:mt-1">
+              <span className="hero-enter block">{slide.headline[0]}</span>
+              <span
+                className="hero-enter mt-2 block text-[#ffca72] sm:mt-1"
+                style={{ animationDelay: "80ms" }}
+              >
                 {slide.headline[1].split(" agora")[0]}{" "}
                 <span className="text-[#ffca72]">agora</span>
               </span>
-              <span className="mt-2 block text-[#f8c44d] sm:mt-1">
+              <span
+                className="hero-enter mt-2 block text-[#f8c44d] sm:mt-1"
+                style={{ animationDelay: "150ms" }}
+              >
                 {slide.headline[2]}
               </span>
             </h1>
 
-            <p className="mt-4 max-w-92 text-sm leading-relaxed text-neutral-200/80 sm:text-base">
+            <p
+              className="hero-enter mt-4 max-w-92 text-sm leading-relaxed text-neutral-200/80 sm:text-base"
+              style={{ animationDelay: "220ms" }}
+            >
               {slide.description}
             </p>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+            <div
+              className="hero-enter mt-6 flex flex-wrap items-center gap-3"
+              style={{ animationDelay: "290ms" }}
+            >
               <button
                 onClick={onVerCardapio}
                 className="flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#ff9b2f_0%,#ff7a00_30%,#ffb949_100%)] px-5 py-3 text-sm font-extrabold text-[#1a120d] shadow-[0_10px_20px_rgba(255,125,0,0.35)] transition hover:brightness-105 active:scale-[0.98] sm:px-7 sm:py-3.5"
@@ -168,14 +229,16 @@ export default function HeroBanner({
               </button>
             </div>
           </div>
+          </div>
 
-          {slides.length > 1 && (
+          {availableSlides.length > 1 && (
             <div className="flex items-center justify-end gap-3 pb-1">
               <div className="flex items-center gap-1.5">
-                {slides.map((_, i) => (
+                {availableSlides.map((_, i) => (
                   <button
                     key={i}
                     aria-label={`Ir para o slide ${i + 1}`}
+                    aria-pressed={i === active}
                     onClick={() => goTo(i)}
                     className={`h-1.5 rounded-full transition-all ${
                       i === active ? "w-6 bg-[#f9b44d]" : "w-1.5 bg-white/30"

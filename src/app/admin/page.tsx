@@ -1,11 +1,11 @@
-"use client";
+import { AdminDashboard } from "@/components/admin/dashboard/admin-dashboard";
+import type { Metadata } from "next";
 
-const AdminPage = () => {
-  return (
-    <div className="w-full h-full">
-      <h1 className="text-2xl font-bold">Admin Page</h1>
-    </div>
-  );
+export const metadata: Metadata = {
+  title: "Painel | Administração",
+  robots: { index: false, follow: false },
 };
 
-export default AdminPage;
+export default function AdminPage() {
+  return <AdminDashboard />;
+}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
+  Ban,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -11,17 +12,30 @@ import {
   Clock3,
   CreditCard,
   Headphones,
+  LoaderCircle,
   MapPin,
   Package,
   ReceiptText,
+  RotateCcw,
   ShoppingBag,
+  Trash2,
   Wallet,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +43,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
+import { useCartStore } from "@/store/cart-store";
 import { useTRPC } from "@/trpc/client";
 import type { AppRouter } from "@/trpc/routers/_app";
 
@@ -178,7 +195,13 @@ function OrderItemsPreview({ order }: { order: OrderRecord }) {
     <div className="mt-2 space-y-1 text-xs text-muted-foreground">
       {firstItems.map((item) => (
         <p key={item.id} className="truncate">
-          {item.quantity}x {item.product.name}
+          {item.quantity}x{" "}
+          <Link
+            href={`/cardapio/${encodeURIComponent(item.product.id)}`}
+            className="hover:text-orange-600 hover:underline"
+          >
+            {item.product.name}
+          </Link>
         </p>
       ))}
       {order.items.length > firstItems.length && (
@@ -190,7 +213,13 @@ function OrderItemsPreview({ order }: { order: OrderRecord }) {
 
 export function OrdersContent() {
   const trpc = useTRPC();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<{
+    type: "cancel" | "delete";
+    orderId: string;
+  } | null>(null);
 
   const {
     data: orderPage,
@@ -224,16 +253,145 @@ export function OrdersContent() {
     ),
   ];
   const mostRecentOrder = orders[0];
+  const confirmationOrder = orders.find(
+    (order) => order.id === confirmation?.orderId,
+  );
+  const invalidateOrders = () =>
+    queryClient.invalidateQueries({ queryKey: trpc.order.pathKey() });
+  const cancelOrder = useMutation(
+    trpc.order.cancel.mutationOptions({
+      onSuccess: async () => {
+        await invalidateOrders();
+        setConfirmation(null);
+        toast.add({
+          title: "Pedido cancelado",
+          description: "O pedido foi movido para o histórico.",
+          type: "success",
+        });
+      },
+      onError: (mutationError) => {
+        toast.add({
+          title: "Não foi possível cancelar o pedido",
+          description: mutationError.message,
+          type: "error",
+        });
+      },
+    }),
+  );
+  const deleteOrder = useMutation(
+    trpc.order.deleteCancelled.mutationOptions({
+      onSuccess: async () => {
+        await invalidateOrders();
+        setConfirmation(null);
+        toast.add({
+          title: "Pedido excluído",
+          description: "O pedido cancelado foi removido do histórico.",
+          type: "success",
+        });
+      },
+      onError: (mutationError) => {
+        toast.add({
+          title: "Não foi possível excluir o pedido",
+          description: mutationError.message,
+          type: "error",
+        });
+      },
+    }),
+  );
+  const reorder = useMutation(
+    trpc.order.reorder.mutationOptions({
+      onSuccess: (result) => {
+        if (!result.items.length) {
+          toast.add({
+            title: "Produtos indisponíveis",
+            description: "Nenhum produto deste pedido está disponível agora.",
+            type: "warning",
+          });
+          return;
+        }
+
+        const cart = useCartStore.getState();
+        const quantityLimited = result.items.some(
+          (item) => item.quantity + (cart.getItem(item.id)?.quantity ?? 0) > 20,
+        );
+        for (const item of result.items) {
+          cart.addItem(item, item.quantity);
+        }
+
+        const partiallyUnavailable = result.unavailableCount > 0;
+        if (partiallyUnavailable || quantityLimited) {
+          toast.add({
+            title: "Pedido adicionado parcialmente",
+            description: [
+              partiallyUnavailable
+                ? `${result.unavailableCount} produto(s) indisponível(is) não foram adicionados.`
+                : null,
+              quantityLimited
+                ? "A quantidade de alguns produtos foi ajustada ao limite do carrinho."
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" "),
+            type: "warning",
+          });
+        } else {
+          toast.add({
+            title: "Itens adicionados ao carrinho",
+            description: "Confira os preços atuais antes de finalizar.",
+            type: "success",
+          });
+        }
+
+        router.push("/carrinho");
+      },
+      onError: (mutationError) => {
+        toast.add({
+          title: "Não foi possível comprar este pedido novamente",
+          description: mutationError.message,
+          type: "error",
+        });
+      },
+    }),
+  );
 
   if (isLoading) {
     return (
       <main className="min-h-screen bg-stone-50 px-4 py-8 dark:bg-background">
-        <div className="mx-auto max-w-7xl animate-pulse space-y-5">
-          <div className="h-12 w-64 rounded-xl bg-muted" />
+        <div
+          role="status"
+          aria-label="Carregando pedidos"
+          className="mx-auto max-w-7xl space-y-5"
+        >
+          <Skeleton className="h-12 w-64 max-w-full rounded-xl" />
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-            <div className="h-[30rem] rounded-2xl bg-muted" />
-            <div className="h-80 rounded-2xl bg-muted" />
+            <div className="space-y-4">
+              {Array.from({ length: 3 }, (_, index) => (
+                <div key={index} className="space-y-4 rounded-2xl border bg-card p-5">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-36" />
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                  </div>
+                  <div className="flex gap-3">
+                    <Skeleton className="size-20 rounded-xl" />
+                    <div className="flex-1 space-y-3">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-4 w-full" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-9 w-full rounded-lg" />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-4 rounded-2xl border bg-card p-5">
+              <Skeleton className="h-6 w-36" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+            </div>
           </div>
+          <span className="sr-only">Carregando pedidos...</span>
         </div>
       </main>
     );
@@ -365,6 +523,22 @@ export function OrdersContent() {
                           >
                             Ver detalhes <ArrowRight className="size-4" />
                           </button>
+                          {order.status === "PENDING" && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="mt-2 w-full text-destructive hover:text-destructive"
+                              onClick={() =>
+                                setConfirmation({
+                                  type: "cancel",
+                                  orderId: order.id,
+                                })
+                              }
+                            >
+                              <Ban className="size-4" />
+                              Cancelar pedido
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </article>
@@ -432,13 +606,45 @@ export function OrdersContent() {
                         <StatusBadge status={order.status} />
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setSelectedOrderId(order.id)}
-                        className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition hover:border-orange-500 hover:text-orange-600"
-                      >
-                        Ver detalhes <ArrowRight className="size-4" />
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setSelectedOrderId(order.id)}
+                        >
+                          Ver detalhes <ArrowRight className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={reorder.isPending}
+                          onClick={() => reorder.mutate({ id: order.id })}
+                        >
+                          {reorder.isPending ? (
+                            <LoaderCircle className="size-4 animate-spin" />
+                          ) : (
+                            <RotateCcw className="size-4" />
+                          )}
+                          Comprar novamente
+                        </Button>
+                        {order.status === "CANCELLED" &&
+                          order.payment?.status !== "PAID" && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() =>
+                                setConfirmation({
+                                  type: "delete",
+                                  orderId: order.id,
+                                })
+                              }
+                            >
+                              <Trash2 className="size-4" />
+                              Excluir
+                            </Button>
+                          )}
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -547,6 +753,85 @@ export function OrdersContent() {
         </div>
       </div>
 
+      <AlertDialog
+        open={confirmation !== null}
+        onOpenChange={(open) => {
+          if (!open && !cancelOrder.isPending && !deleteOrder.isPending) {
+            setConfirmation(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmation?.type === "cancel"
+                ? "Cancelar este pedido?"
+                : "Excluir este pedido do histórico?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmation?.type === "cancel" ? (
+                <>
+                  O pedido{" "}
+                  <strong>
+                    {confirmationOrder
+                      ? getOrderNumber(confirmationOrder.id)
+                      : ""}
+                  </strong>{" "}
+                  será cancelado e o pagamento pendente também será marcado
+                  como cancelado. Pedidos já pagos não podem ser cancelados
+                  por esta tela.
+                </>
+              ) : (
+                <>
+                  O pedido cancelado{" "}
+                  <strong>
+                    {confirmationOrder
+                      ? getOrderNumber(confirmationOrder.id)
+                      : ""}
+                  </strong>{" "}
+                  será removido permanentemente do seu histórico. Essa ação
+                  não pode ser desfeita.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={cancelOrder.isPending || deleteOrder.isPending}
+              onClick={() => setConfirmation(null)}
+            >
+              Voltar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={
+                !confirmation ||
+                cancelOrder.isPending ||
+                deleteOrder.isPending
+              }
+              onClick={() => {
+                if (!confirmation) return;
+                if (confirmation.type === "cancel") {
+                  cancelOrder.mutate({ id: confirmation.orderId });
+                } else {
+                  deleteOrder.mutate({ id: confirmation.orderId });
+                }
+              }}
+            >
+              {(cancelOrder.isPending || deleteOrder.isPending) && (
+                <LoaderCircle className="size-4 animate-spin" />
+              )}
+              {confirmation?.type === "cancel"
+                ? "Confirmar cancelamento"
+                : "Excluir pedido"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog
         open={selectedOrderId !== null}
         onOpenChange={(open) => {
@@ -566,9 +851,21 @@ export function OrdersContent() {
           </DialogHeader>
 
           {selectedOrder.isLoading ? (
-            <div className="space-y-3 py-5">
-              <div className="h-16 animate-pulse rounded-xl bg-muted" />
-              <div className="h-16 animate-pulse rounded-xl bg-muted" />
+            <div
+              role="status"
+              aria-label="Carregando detalhes do pedido"
+              className="space-y-3 py-5"
+            >
+              {Array.from({ length: 3 }, (_, index) => (
+                <div key={index} className="flex gap-3 rounded-xl border p-3">
+                  <Skeleton className="size-14 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
             </div>
           ) : selectedOrder.isError ? (
             <p className="py-6 text-sm text-destructive">
@@ -615,9 +912,12 @@ function OrderDetails({ order }: { order: OrderRecord }) {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">
+                <Link
+                  href={`/cardapio/${encodeURIComponent(item.product.id)}`}
+                  className="block truncate text-sm font-semibold hover:text-orange-600 hover:underline"
+                >
                   {item.product.name}
-                </p>
+                </Link>
                 <p className="text-xs text-muted-foreground">
                   {item.quantity} × {formatPrice(item.unitPrice)}
                 </p>

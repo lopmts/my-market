@@ -41,6 +41,14 @@ paginação, edição, ativação/desativação e exclusão confirmada. Produtos
 associados a itens de pedidos não podem ser excluídos; nesses casos, desative o
 produto para mantê-lo fora do cardápio sem perder o histórico.
 
+## Painel administrativo
+
+A rota `/admin` exibe indicadores dos últimos sete dias, faturamento de
+pagamentos confirmados, novos clientes, unidades vendidas, distribuição dos
+pedidos por status, pedidos recentes e produtos mais vendidos. Os dados vêm
+da rota protegida `admin.dashboard` e são atualizados automaticamente a cada
+minuto.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
