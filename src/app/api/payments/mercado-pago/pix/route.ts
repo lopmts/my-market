@@ -5,6 +5,10 @@ import type { Payment } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { paymentClient } from "@/lib/mercado-pago";
+import {
+  getMercadoPagoWebhookUrl,
+  MercadoPagoWebhookUrlError,
+} from "@/lib/mercado-pago-webhook-url";
 import { calculateOrderTotals } from "@/lib/order-pricing";
 import { prisma } from "@/lib/prisma";
 
@@ -138,6 +142,7 @@ export async function POST(request: NextRequest) {
     // Se o PIX anterior expirou/falhou, a tentativa aumenta e gera uma nova cobrança.
     const attempt = Number(existing?.attempts ?? 0) + 1;
     const expiresAt = new Date(Date.now() + PIX_TTL_MINUTES * 60_000);
+    const notificationUrl = getMercadoPagoWebhookUrl();
 
     const mpPayment = await paymentClient.create({
       body: {
@@ -148,7 +153,7 @@ export async function POST(request: NextRequest) {
         external_reference: order.id,
         date_of_expiration: expiresAt.toISOString(),
         payer: { email: session.user.email },
-        notification_url: `${process.env.APP_URL}/api/webhooks/mercado-pago`,
+        notification_url: notificationUrl,
       },
       requestOptions: {
         idempotencyKey: `pix-${order.id}-${attempt}`,
@@ -206,6 +211,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(pixResponse(saved));
   } catch (error) {
+    if (error instanceof MercadoPagoWebhookUrlError) {
+      console.error("URL pública do webhook do Mercado Pago não configurada");
+      return NextResponse.json({ message: error.message }, { status: 503 });
+    }
+
     console.error("Erro ao criar pagamento PIX:", error);
 
     return NextResponse.json(

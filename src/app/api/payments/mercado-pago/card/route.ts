@@ -4,6 +4,10 @@ import { z } from "zod";
 import type { Payment } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { paymentClient } from "@/lib/mercado-pago";
+import {
+  getMercadoPagoWebhookUrl,
+  MercadoPagoWebhookUrlError,
+} from "@/lib/mercado-pago-webhook-url";
 import { calculateOrderTotals } from "@/lib/order-pricing";
 import { prisma } from "@/lib/prisma";
 
@@ -126,6 +130,7 @@ export async function POST(request: NextRequest) {
 
     // 4. Idempotência: tentativa incremental por pedido
     const attempt = Number(order.payment?.attempts ?? 0) + 1;
+    const notificationUrl = getMercadoPagoWebhookUrl();
 
     const mpPayment = await paymentClient.create({
       body: {
@@ -140,7 +145,7 @@ export async function POST(request: NextRequest) {
           : undefined,
         external_reference: order.id,
         payer: parsed.data.payer,
-        notification_url: `${process.env.APP_URL}/api/webhooks/mercado-pago`,
+        notification_url: notificationUrl,
       },
       requestOptions: {
         idempotencyKey: `card-${order.id}-${attempt}`,
@@ -180,6 +185,11 @@ export async function POST(request: NextRequest) {
       cardResponse(saved, mpPayment.status ?? "unknown"),
     );
   } catch (error) {
+    if (error instanceof MercadoPagoWebhookUrlError) {
+      console.error("URL pública do webhook do Mercado Pago não configurada");
+      return NextResponse.json({ message: error.message }, { status: 503 });
+    }
+
     console.error("Erro ao criar pagamento com cartão:", error);
     return NextResponse.json(
       { message: "Erro ao processar o pagamento" },

@@ -26,6 +26,15 @@ Configure `NEXT_PUBLIC_SITE_URL` com a URL canônica do site em produção. Se e
 não estiver definida, o projeto usa `APP_URL`, as variáveis de domínio da
 Vercel ou `http://localhost:3000`, nessa ordem.
 
+Os pagamentos do Mercado Pago exigem que `APP_URL` (ou
+`NEXT_PUBLIC_SITE_URL`) aponte para uma URL pública HTTPS para que o webhook
+seja válido e possa receber notificações. Em desenvolvimento local, use um
+túnel HTTPS (por exemplo, ngrok ou Cloudflare Tunnel) apontado para a porta
+3000 e defina `APP_URL` para a URL HTTPS gerada; reinicie o servidor após
+alterar o `.env`. URLs `localhost` não podem receber notificações do Mercado
+Pago e o endpoint de pagamento retorna uma mensagem de configuração em vez de
+enviar uma URL inválida.
+
 ## Pedidos e pagamentos
 
 O carrinho consulta `order.quote` para exibir preços atuais, e a criação do
